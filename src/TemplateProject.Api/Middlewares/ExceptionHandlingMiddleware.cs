@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using FluentValidation;
+using Microsoft.Extensions.Logging;
 using TemplateProject.Application.Common.Responses;
 
 namespace TemplateProject.Api.Middlewares;
@@ -10,10 +11,14 @@ public class ExceptionHandlingMiddleware
 {
     private static readonly JsonSerializerOptions JsonSerializerOptions = new(JsonSerializerDefaults.Web);
     private readonly RequestDelegate _next;
+    private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 
-    public ExceptionHandlingMiddleware(RequestDelegate next)
+    public ExceptionHandlingMiddleware(
+        RequestDelegate next,
+        ILogger<ExceptionHandlingMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -24,14 +29,18 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception exception)
         {
-            await HandleExceptionAsync(context, exception);
+            await HandleExceptionAsync(context, exception, _logger);
         }
     }
 
-    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private static async Task HandleExceptionAsync(
+        HttpContext context,
+        Exception exception,
+        ILogger<ExceptionHandlingMiddleware> logger)
     {
         var traceId = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
         var (statusCode, errors) = MapException(exception);
+        LogException(logger, exception, traceId, context.Request.Method, context.Request.Path.Value ?? string.Empty, statusCode);
 
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
@@ -47,6 +56,28 @@ public class ExceptionHandlingMiddleware
         };
 
         await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonSerializerOptions));
+    }
+
+    private static void LogException(
+        ILogger<ExceptionHandlingMiddleware> logger,
+        Exception exception,
+        string traceId,
+        string method,
+        string path,
+        int statusCode)
+    {
+        const string messageTemplate = "Exception handled for {Method} {Path} with status code {StatusCode} and TraceId {TraceId}";
+
+        switch (exception)
+        {
+            case ValidationException:
+            case ApplicationException:
+                logger.LogWarning(exception, messageTemplate, method, path, statusCode, traceId);
+                break;
+            default:
+                logger.LogError(exception, messageTemplate, method, path, statusCode, traceId);
+                break;
+        }
     }
 
     private static (int StatusCode, List<ApiError> Errors) MapException(Exception exception)

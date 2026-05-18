@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using TemplateProject.Application.Common.Responses;
 using TemplateProject.Application.Features.Persons.DTOs;
 using TemplateProject.Application.Features.Persons.Interfaces;
-using TemplateProject.Domain.Entities;
 
 namespace TemplateProject.Api.Controllers;
 
@@ -12,18 +11,12 @@ namespace TemplateProject.Api.Controllers;
 [Produces("application/json")]
 public class PersonsController : ControllerBase
 {
-    private readonly IPersonRepository _personRepository;
-    private readonly IValidator<CreatePersonRequest> _createPersonValidator;
-    private readonly IValidator<UpdatePersonRequest> _updatePersonValidator;
+    private readonly IPersonService _personService;
 
     public PersonsController(
-        IPersonRepository personRepository,
-        IValidator<CreatePersonRequest> createPersonValidator,
-        IValidator<UpdatePersonRequest> updatePersonValidator)
+        IPersonService personService)
     {
-        _personRepository = personRepository;
-        _createPersonValidator = createPersonValidator;
-        _updatePersonValidator = updatePersonValidator;
+        _personService = personService;
     }
 
     /// <summary>
@@ -36,13 +29,8 @@ public class PersonsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        var persons = await _personRepository.GetAllAsync(cancellationToken);
-        var result = persons
-            .Select(person => person.ToDto())
-            .ToList()
-            .AsReadOnly();
-
-        return Ok(CreateSuccessResponse(result, "Operación exitosa."));
+        var response = await _personService.GetAllAsync(cancellationToken);
+        return Ok(response);
     }
 
     /// <summary>
@@ -57,13 +45,8 @@ public class PersonsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
-        var person = await _personRepository.GetByIdAsync(id, cancellationToken);
-        if (person is null)
-        {
-            throw new ApplicationException("La persona no existe.");
-        }
-
-        return Ok(CreateSuccessResponse(person.ToDto(), "Operación exitosa."));
+        var response = await _personService.GetByIdAsync(id, cancellationToken);
+        return Ok(response);
     }
 
     /// <summary>
@@ -79,21 +62,8 @@ public class PersonsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreatePersonRequest? request, CancellationToken cancellationToken)
     {
         var validRequest = EnsureRequestBody(request);
-        await _createPersonValidator.ValidateAndThrowAsync(validRequest, cancellationToken);
-
-        var person = new Person
-        {
-            Id = Guid.NewGuid(),
-            FirstName = validRequest.FirstName.Trim(),
-            LastName = validRequest.LastName.Trim(),
-            Email = validRequest.Email.Trim(),
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        var createdPerson = await _personRepository.AddAsync(person, cancellationToken);
-
-        return Ok(CreateSuccessResponse(createdPerson.ToDto(), "Persona creada exitosamente."));
+        var response = await _personService.CreateAsync(validRequest, cancellationToken);
+        return Ok(response);
     }
 
     /// <summary>
@@ -110,22 +80,8 @@ public class PersonsController : ControllerBase
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePersonRequest? request, CancellationToken cancellationToken)
     {
         var validRequest = EnsureRequestBody(request);
-        await _updatePersonValidator.ValidateAndThrowAsync(validRequest, cancellationToken);
-
-        var existingPerson = await _personRepository.GetByIdAsync(id, cancellationToken);
-        if (existingPerson is null)
-        {
-            throw new ApplicationException("La persona no existe.");
-        }
-
-        existingPerson.FirstName = validRequest.FirstName.Trim();
-        existingPerson.LastName = validRequest.LastName.Trim();
-        existingPerson.Email = validRequest.Email.Trim();
-        existingPerson.IsActive = validRequest.IsActive;
-
-        var updatedPerson = await _personRepository.UpdateAsync(existingPerson, cancellationToken);
-
-        return Ok(CreateSuccessResponse(updatedPerson.ToDto(), "Persona actualizada exitosamente."));
+        var response = await _personService.UpdateAsync(id, validRequest, cancellationToken);
+        return Ok(response);
     }
 
     /// <summary>
@@ -140,13 +96,8 @@ public class PersonsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var deleted = await _personRepository.DeleteAsync(id, cancellationToken);
-        if (!deleted)
-        {
-            throw new ApplicationException("La persona no existe.");
-        }
-
-        return Ok(CreateSuccessResponse<object?>(null, "Persona eliminada exitosamente."));
+        var response = await _personService.DeleteAsync(id, cancellationToken);
+        return Ok(response);
     }
 
     private static TRequest EnsureRequestBody<TRequest>(TRequest? request)
@@ -158,18 +109,5 @@ public class PersonsController : ControllerBase
         }
 
         return request;
-    }
-
-    private ApiResponse<T> CreateSuccessResponse<T>(T data, string message)
-    {
-        return new ApiResponse<T>
-        {
-            TraceId = HttpContext.TraceIdentifier,
-            Success = true,
-            Code = StatusCodes.Status200OK,
-            Message = message,
-            Data = data,
-            Errors = null
-        };
     }
 }

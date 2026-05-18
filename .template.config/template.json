@@ -21,6 +21,7 @@
       "exclude": [
         "**/[Bb]in/**",
         "**/[Oo]bj/**",
+        "**/[Ll]ogs/**",
         ".template.config/**",
         "!.template.config/template.json",
         "**/.vs/**",
