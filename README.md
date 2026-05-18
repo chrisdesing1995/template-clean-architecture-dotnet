@@ -68,6 +68,19 @@ template-clean-architecture-dotnet
 - `TemplateProject.Infrastructure`: implementaciones técnicas e integraciones externas.
 - `tests/*`: proyectos de pruebas separados por capa para crecimiento enterprise ordenado.
 
+## GitHub Governance
+
+La template incluye una base de gobernanza para GitHub con enfoque enterprise:
+
+- estándar GitFlow documentado en [github-gitflow-standard.md](/Users/macuser/Repos/template-clean-architecture-dotnet/docs/governance/github-gitflow-standard.md)
+- `pull_request_template.md`
+- `CODEOWNERS`
+- `Dependabot`
+- `CodeQL`
+- pipeline CI para `dotnet restore`, `dotnet build` y `dotnet test`
+
+Esto deja el repositorio preparado para trabajar con `main`, `develop`, `feature/*`, `bugfix/*`, `release/*` y `hotfix/*`, con branch protection y quality gates administrados desde GitHub.
+
 ## Logging
 
 La template usa `Serilog` como base de logging estructurado enterprise.
