@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "TemplateProject.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:60839;http://localhost:60840"
+    }
+  }
+}
