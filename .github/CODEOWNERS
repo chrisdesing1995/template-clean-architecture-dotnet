@@ -1,0 +1,10 @@
+# Ajustar usuarios o equipos reales al adoptar la template.
+
+* @your-org/backend-team
+
+/src/TemplateProject.Api/ @your-org/backend-team
+/src/TemplateProject.Application/ @your-org/backend-team
+/src/TemplateProject.Domain/ @your-org/architecture-team
+/src/TemplateProject.Infrastructure/ @your-org/backend-team
+/docs/ @your-org/architecture-team
+/README.md @your-org/architecture-team
